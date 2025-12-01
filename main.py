@@ -5,7 +5,8 @@ from langchain_groq import ChatGroq
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.chains import RetrievalQA
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
@@ -139,11 +140,17 @@ if uploaded_file is not None and not st.session_state.file_processed:
         
         # Create retrieval chain
         st.session_state.retriever = st.session_state.vector.as_retriever()
-        st.session_state.retriever_chain = RetrievalQA.from_chain_type(
-            llm=st.session_state.llm,
-            chain_type="stuff",
-            retriever=st.session_state.retriever,
-            return_source_documents=True
+        
+        prompt = ChatPromptTemplate.from_template("""
+        Answer based on context: {context}
+        Question: {question}
+        """)
+        
+        st.session_state.retriever_chain = (
+            {"context": st.session_state.retriever, "question": RunnablePassthrough()}
+            | prompt
+            | st.session_state.llm
+            | StrOutputParser()
         )
         
         st.session_state.file_processed = True
@@ -169,11 +176,11 @@ if st.session_state.file_processed:
     
     if user_prompt and user_prompt != st.session_state.last_input:
         with st.spinner("Thinking..."):
-            response = st.session_state.retriever_chain({"query": user_prompt})
+            response = st.session_state.retriever_chain.invoke(user_prompt)
             
             # Add to chat history only if it's a new input
             st.session_state.chat_history.append({"role": "user", "content": user_prompt})
-            st.session_state.chat_history.append({"role": "assistant", "content": response["result"]})
+            st.session_state.chat_history.append({"role": "assistant", "content": response})
             
             # Update last input
             st.session_state.last_input = user_prompt
