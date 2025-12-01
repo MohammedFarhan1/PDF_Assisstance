@@ -100,7 +100,7 @@ with st.sidebar:
 load_dotenv()
 
 # Ensure the Groq API key is set
-groq_api_key = os.getenv("GROQ_API_KEY")
+groq_api_key = "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"
 if not groq_api_key:
     st.error("❌ Groq API Key is missing! Set it in your .env file or environment variables.")
     st.stop()
@@ -200,3 +200,4 @@ st.markdown("""
         <p>Made with ❤️ by Farhan</p>
     </div>
 """, unsafe_allow_html=True)
+
